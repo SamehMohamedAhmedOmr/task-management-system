@@ -124,6 +124,12 @@ class TaskService
             abort(HttpStatus::FORBIDDEN, 'Forbidden: You cannot update this task');
         }
 
+        // check for duplicate dependency
+        if ($this->hasDuplicateDependency($taskId, $dependsOnTaskId)) {
+            abort(HttpStatus::UNPROCESSABLE_ENTITY, 'This dependency already exists');
+        }
+
+        // check for circular dependency
         if ($this->hasCircularDependency($taskId, $dependsOnTaskId)) {
             abort(HttpStatus::UNPROCESSABLE_ENTITY, 'Circular dependency detected');
         }
@@ -150,7 +156,6 @@ class TaskService
      */
     public function canCompleteTask(Task $task): bool
     {
-        // Check if any dependency is not completed
         $incompleteDependencies = $task->dependencies()
             ->where('status', '!=', TaskStatus::COMPLETED)
             ->exists();
@@ -167,20 +172,22 @@ class TaskService
     }
 
     /**
+     * Check for duplicate dependency.
+     */
+    public function hasDuplicateDependency(int $taskId, int $dependsOnTaskId): bool
+    {
+        return Task::find($taskId)
+            ->dependencies()
+            ->where('depends_on_task_id', $dependsOnTaskId)
+            ->exists();
+    }
+
+    /**
      * Check for circular dependency.
      */
     public function hasCircularDependency(int $taskId, int $dependsOnTaskId): bool
     {
         if ($taskId === $dependsOnTaskId) {
-            return true;
-        }
-
-        $dependsOnTask = Task::find($dependsOnTaskId);
-        if (!$dependsOnTask) {
-            return false;
-        }
-
-        if ($dependsOnTask->dependencies()->where('depends_on_task_id', $taskId)->exists()) {
             return true;
         }
 
@@ -194,15 +201,11 @@ class TaskService
         }
 
         if (in_array($currentDependencyId, $visited)) {
-            return false; // Loop detected in traversal but not necessarily back to original
+            return false;
         }
 
         $visited[] = $currentDependencyId;
         $task = Task::with('dependencies')->find($currentDependencyId);
-
-        if (!$task) {
-            return false;
-        }
 
         foreach ($task->dependencies as $dependency) {
             if ($this->checkCycleRecursive($originalTaskId, $dependency->id, $visited)) {
