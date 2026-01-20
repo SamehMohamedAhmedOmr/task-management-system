@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Helpers\ApiResponse;
+use Illuminate\Foundation\AliasLoader;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,7 +13,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton('ApiResponse', function () {
+            return new ApiResponse();
+        });
     }
 
     /**
@@ -19,6 +23,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $loader = AliasLoader::getInstance();
+        $loader->alias('ApiResponse', \App\Facades\ApiResponseFacade::class);
     }
 }

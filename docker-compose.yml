@@ -1,0 +1,66 @@
+services:
+    app:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        image: task-management-app
+        container_name: task-app
+        restart: unless-stopped
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+        networks:
+            - task-network
+        depends_on:
+            - mysql
+
+    nginx:
+        image: nginx:alpine
+        container_name: task-nginx
+        restart: unless-stopped
+        ports:
+            - "8000:80"
+        volumes:
+            - ./:/var/www
+            - ./docker/nginx:/etc/nginx/conf.d
+        networks:
+            - task-network
+        depends_on:
+            - app
+
+    mysql:
+        image: mysql:8.0
+        container_name: task-mysql
+        restart: unless-stopped
+        environment:
+            MYSQL_DATABASE: ${DB_DATABASE:-task_management}
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-root}
+            MYSQL_USER: ${DB_USERNAME:-laravel}
+            SERVICE_TAGS: dev
+            SERVICE_NAME: mysql
+        volumes:
+            - dbdata:/var/lib/mysql
+        networks:
+            - task-network
+
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        container_name: task-phpmyadmin
+        links:
+            - mysql:db
+        ports:
+            - "8080:80"
+        environment:
+            PMA_HOST: mysql
+            MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+        networks:
+            - task-network
+
+networks:
+    task-network:
+        driver: bridge
+
+volumes:
+    dbdata:
+        driver: local
