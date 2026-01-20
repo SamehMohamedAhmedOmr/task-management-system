@@ -3,40 +3,14 @@
 namespace App\Services;
 
 use App\Models\Role;
+use App\Constants\HttpStatus;
+use App\Constants\TaskStatus;
 use App\Models\Task;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
 
 class TaskService
 {
-    /**
-     * Create a new task.
-     */
-    public function createTask(array $data, User $createdBy): Task
-    {
-        return Task::create(array_merge($data, [
-            'created_by' => $createdBy->id,
-            'status' => Task::PENDING, // Default status
-        ]));
-    }
-
-    /**
-     * Update an existing task.
-     */
-    public function updateTask(Task $task, array $data, User $user): Task
-    {
-        // Users can only update status
-        if ($user->role->key === Role::USER) {
-            $task->update(['status' => $data['status']]);
-            return $task->refresh();
-        }
-
-        // Managers can update everything
-        $task->update($data);
-        return $task->refresh();
-    }
 
     /**
      * Get tasks based on filters and user role.
@@ -71,13 +45,114 @@ class TaskService
     }
 
     /**
+     * Create a new task.
+     */
+    public function createTask(array $data, User $createdBy): Task
+    {
+        return Task::create(array_merge($data, [
+            'created_by' => $createdBy->id,
+            'status' => TaskStatus::PENDING, // Default status
+        ]));
+    }
+
+    /**
+     * Get a task by ID with authorization check.
+     */
+    public function getTaskById(int $taskId, User $user): ?Task
+    {
+        $task = Task::with(['assignedTo', 'createdBy', 'dependencies'])->find($taskId);
+
+        if (!$task) {
+            return null;
+        }
+
+        // users can only see their assigned tasks
+        if ($user->role->key === Role::USER && $task->assigned_to !== $user->id) {
+            return null;
+        }
+
+        return $task;
+    }
+
+    /**
+     * Update a task by ID with authorization check.
+     */
+    public function updateTaskById(int $taskId, array $data, User $user): Task
+    {
+        $task = Task::findOrFail($taskId);
+
+        // check if user can update this task
+        if (!$this->canUserUpdateTask($task, $user)) {
+            abort(HttpStatus::FORBIDDEN, 'Forbidden: You cannot update this task');
+        }
+
+        // check for status update vs dependency completion
+        if (isset($data['status']) && $data['status'] === TaskStatus::COMPLETED) {
+            if (!$this->canCompleteTask($task)) {
+                abort(HttpStatus::UNPROCESSABLE_ENTITY, 'Cannot complete task: Unfinished dependencies');
+            }
+        }
+
+        return $this->updateTask($task, $data, $user);
+    }
+
+    /**
+     * Update an existing task.
+     */
+    public function updateTask(Task $task, array $data, User $user): Task
+    {
+        // users can only update status
+        if ($user->role->key === Role::USER) {
+            $task->update(['status' => $data['status']]);
+            return $task->refresh();
+        }
+
+        // managers can update everything
+        $task->update($data);
+        return $task->refresh();
+    }
+
+    /**
+     * Add dependency by task ID with authorization check.
+     */
+    public function addDependencyById(int $taskId, int $dependsOnTaskId, User $user): void
+    {
+        $task = Task::findOrFail($taskId);
+
+        // check if user can update this task
+        if (!$this->canUserUpdateTask($task, $user)) {
+            abort(HttpStatus::FORBIDDEN, 'Forbidden: You cannot update this task');
+        }
+
+        if ($this->hasCircularDependency($taskId, $dependsOnTaskId)) {
+            abort(HttpStatus::UNPROCESSABLE_ENTITY, 'Circular dependency detected');
+        }
+
+        $this->addDependency($task, $dependsOnTaskId);
+    }
+
+    /**
+     * Check if user can update a task.
+     */
+    public function canUserUpdateTask(Task $task, User $user): bool
+    {
+        if ($user->role->key === Role::MANAGER) {
+            return true;
+        }
+
+        return $task->assigned_to === $user->id;
+    }
+
+
+
+    /**
      * Check if task can be completed based on dependencies.
      */
     public function canCompleteTask(Task $task): bool
     {
         // Check if any dependency is not completed
         $incompleteDependencies = $task->dependencies()
-            ->where('status', '!=', Task::COMPLETED)
+            ->where('status', '!=', TaskStatus::COMPLETED)
             ->exists();
 
         return !$incompleteDependencies;
@@ -105,14 +180,10 @@ class TaskService
             return false;
         }
 
-        // Check if the task we depend on already depends on us (direct cycle)
         if ($dependsOnTask->dependencies()->where('depends_on_task_id', $taskId)->exists()) {
             return true;
         }
 
-        // Deep check (simplified for now, BFS/DFS ideal for deep graphs)
-        // For this requirement, checking direct and 1-level deep might be enough or we need full recursion
-        // Let's implement a recursive check
         return $this->checkCycleRecursive($taskId, $dependsOnTaskId, []);
     }
 

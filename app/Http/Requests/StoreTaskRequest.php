@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\TaskStatus;
 use App\Models\Role;
 use Illuminate\Foundation\Http\FormRequest;
 use OpenApi\Annotations as OA;
@@ -26,7 +27,7 @@ class StoreTaskRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return $this->user()->role->key === Role::MANAGER;
+        return true;
     }
 
     /**
@@ -39,7 +40,7 @@ class StoreTaskRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'status' => ['required', 'in:pending,in_progress,completed,canceled'],
+            'status' => ['required', 'in:' . implode(',', [TaskStatus::PENDING, TaskStatus::IN_PROGRESS, TaskStatus::COMPLETED, TaskStatus::CANCELED])],
             'due_date' => ['nullable', 'date', 'after:today'],
             'assigned_to' => ['required', 'exists:users,id'],
         ];

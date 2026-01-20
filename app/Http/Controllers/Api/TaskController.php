@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Facades\ApiResponseFacade as ApiResponse;
+use App\Facades\ApiResponse;
+use App\Constants\HttpStatus;
+use App\Constants\TaskStatus;
+use App\Facades\Pagination;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AddDependencyRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\UpdateTaskRequest;
-use App\Http\Resources\TaskCollection;
 use App\Http\Resources\TaskResource;
-use App\Models\Task;
 use App\Services\TaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -52,7 +53,9 @@ class TaskController extends Controller
         $filters = $request->only(['status', 'due_date_from', 'due_date_to', 'assigned_to']);
         $tasks = $this->taskService->getFilteredTasks($filters, $request->user());
 
-        return ApiResponse::success(new TaskCollection($tasks), 'Tasks retrieved successfully');
+        $pagination = Pagination::preparePagination($tasks);
+
+        return ApiResponse::success(HttpStatus::OK, TaskResource::collection($tasks), 'Tasks retrieved successfully', $pagination);
     }
 
     /**
@@ -79,7 +82,7 @@ class TaskController extends Controller
     {
         $task = $this->taskService->createTask($request->validated(), $request->user());
 
-        return ApiResponse::created(new TaskResource($task), 'Task created successfully');
+        return ApiResponse::success(HttpStatus::CREATED, TaskResource::make($task), 'Task created successfully');
     }
 
     /**
@@ -96,21 +99,15 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function show(Task $task): JsonResponse
+    public function show(int $id): JsonResponse
     {
-        // Policy check inside controller method or middleware?
-        // We can use policy here. For simplicity and as per plan, we check if user has access.
-        // TaskService::getFilteredTasks handles list visibility.
-        // For single task visibility:
-        // Users can see tasks assigned to them? Or all tasks?
-        // Requirement: "Users can retrieve only tasks assigned to them"
-        $user = request()->user();
-        if ($user->isUser() && $task->assigned_to !== $user->id) {
-            return ApiResponse::error('Forbidden: You can only view tasks assigned to you', 403);
+        $task = $this->taskService->getTaskById($id, request()->user());
+
+        if (!$task) {
+            return ApiResponse::notFound('Task not found');
         }
 
-        $task->load(['assignedTo', 'createdBy', 'dependencies']);
-        return ApiResponse::success(new TaskResource($task), 'Task details retrieved');
+        return ApiResponse::success(HttpStatus::OK, TaskResource::make($task), 'Task details retrieved');
     }
 
     /**
@@ -131,18 +128,11 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function update(UpdateTaskRequest $request, Task $task): JsonResponse
+    public function update(UpdateTaskRequest $request, int $id): JsonResponse
     {
-        // Special check for status update vs dependency completion
-        if (isset($request->validated()['status']) && $request->validated()['status'] === Task::COMPLETED) {
-            if (!$this->taskService->canCompleteTask($task)) {
-                return ApiResponse::error('Cannot complete task: Unfinished dependencies', 422);
-            }
-        }
+        $updatedTask = $this->taskService->updateTaskById($id, $request->validated(), $request->user());
 
-        $updatedTask = $this->taskService->updateTask($task, $request->validated(), $request->user());
-
-        return ApiResponse::success(new TaskResource($updatedTask), 'Task updated successfully');
+        return ApiResponse::success(HttpStatus::OK, TaskResource::make($updatedTask), 'Task updated successfully');
     }
 
     /**
@@ -162,16 +152,10 @@ class TaskController extends Controller
      *     )
      * )
      */
-    public function addDependency(AddDependencyRequest $request, Task $task): JsonResponse
+    public function addDependency(AddDependencyRequest $request, int $id): JsonResponse
     {
-        $dependsOnTaskId = $request->validated()['depends_on_task_id'];
+        $this->taskService->addDependencyById($id, $request->validated()['depends_on_task_id'], $request->user());
 
-        if ($this->taskService->hasCircularDependency($task->id, $dependsOnTaskId)) {
-            return ApiResponse::error('Circular dependency detected', 422);
-        }
-
-        $this->taskService->addDependency($task, $dependsOnTaskId);
-
-        return ApiResponse::success(null, 'Dependency added successfully');
+        return ApiResponse::success(HttpStatus::OK, null, 'Dependency added successfully');
     }
 }

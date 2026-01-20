@@ -3,7 +3,7 @@
 namespace App\Providers;
 
 use App\Helpers\ApiResponse;
-use Illuminate\Foundation\AliasLoader;
+use App\Helpers\Pagination;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -13,8 +13,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        $this->app->singleton('ApiResponse', function () {
-            return new ApiResponse();
+        $this->registerFacades();
+    }
+
+    private function registerFacades()
+    {
+        $this->app->bind('ApiResponse', function () {
+            return $this->app->make(ApiResponse::class);
+        });
+
+        $this->app->bind('Pagination', function () {
+            return $this->app->make(Pagination::class);
         });
     }
 
@@ -23,7 +32,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $loader = AliasLoader::getInstance();
-        $loader->alias('ApiResponse', \App\Facades\ApiResponseFacade::class);
+
     }
 }

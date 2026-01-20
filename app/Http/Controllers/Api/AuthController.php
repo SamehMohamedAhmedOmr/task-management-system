@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Facades\ApiResponseFacade as ApiResponse; // Use Facade
+use App\Facades\ApiResponse;
+use App\Constants\HttpStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\AuthService;
 use Illuminate\Support\Facades\Auth;
 use OpenApi\Annotations as OA;
 
@@ -19,6 +21,13 @@ use OpenApi\Annotations as OA;
  */
 class AuthController extends Controller
 {
+    protected AuthService $authService;
+
+    public function __construct(AuthService $authService)
+    {
+        $this->authService = $authService;
+    }
+
     /**
      * @OA\Post(
      *     path="/api/auth/login",
@@ -48,16 +57,15 @@ class AuthController extends Controller
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        if (!Auth::attempt($request->only('email', 'password'))) {
+        $data = $this->authService->login($request->only('email', 'password'));
+
+        if (!$data) {
             return ApiResponse::unauthorized('Invalid credentials');
         }
 
-        $user = Auth::user();
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return ApiResponse::success([
-            'token' => $token,
-            'user' => new UserResource($user),
+        return ApiResponse::success(HttpStatus::OK, [
+            'token' => $data['token'],
+            'user' => UserResource::make($data['user']),
         ], 'Logged in successfully');
     }
 
@@ -75,9 +83,9 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $request->user()->currentAccessToken()->delete();
+        $this->authService->logout($request->user());
 
-        return ApiResponse::success(null, 'Logged out successfully');
+        return ApiResponse::success(HttpStatus::OK, null, 'Logged out successfully');
     }
 
     /**
@@ -98,6 +106,6 @@ class AuthController extends Controller
      */
     public function me(Request $request): JsonResponse
     {
-        return ApiResponse::success(new UserResource($request->user()), 'User details retrieved');
+        return ApiResponse::success(HttpStatus::OK, UserResource::make($request->user()), 'User details retrieved');
     }
 }

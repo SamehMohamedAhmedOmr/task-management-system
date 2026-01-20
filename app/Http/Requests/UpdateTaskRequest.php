@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Constants\TaskStatus;
 use App\Models\Role;
-use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
 use OpenApi\Annotations as OA;
 
@@ -26,21 +26,7 @@ class UpdateTaskRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        $task = $this->route('task'); // Assumes route parameter is named 'task' or implicitly bound
-        // Check finding logic if implicit binding not working or using ID
-        if (!($task instanceof Task)) {
-            $task = Task::find($this->route('id'));
-            if (!$task) return false;
-        }
-
-        $user = $this->user();
-
-        if ($user->role->key === Role::MANAGER) {
-            return true;
-        }
-
-        // Users can only update their own tasks
-        return $task->assigned_to === $user->id;
+        return true;
     }
 
     /**
@@ -51,7 +37,7 @@ class UpdateTaskRequest extends FormRequest
     public function rules(): array
     {
         $rules = [
-            'status' => ['sometimes', 'required', 'in:pending,in_progress,completed,canceled'],
+            'status' => ['sometimes', 'required', 'in:' . implode(',', [TaskStatus::PENDING, TaskStatus::IN_PROGRESS, TaskStatus::COMPLETED, TaskStatus::CANCELED])],
         ];
 
         if ($this->user()->role->key === Role::MANAGER) {

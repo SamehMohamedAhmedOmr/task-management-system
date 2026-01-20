@@ -2,7 +2,8 @@
 
 namespace App\Http\Middleware;
 
-use App\Facades\ApiResponseFacade as ApiResponse;
+use App\Facades\ApiResponse;
+use App\Constants\HttpStatus;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,7 +22,7 @@ class CheckRole
         }
 
         if (!$request->user()->role || !in_array($request->user()->role->key, $roles)) {
-            return ApiResponse::error('Forbidden: Insufficient permissions', 403);
+            return ApiResponse::error(HttpStatus::FORBIDDEN, null, 'Forbidden: Insufficient permissions');
         }
 
         return $next($request);
