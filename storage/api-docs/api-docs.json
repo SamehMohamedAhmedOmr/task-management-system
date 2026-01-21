@@ -417,7 +417,7 @@
                     "due_date": {
                         "type": "string",
                         "format": "date",
-                        "example": "2024-12-31"
+                        "example": "2026-12-31"
                     },
                     "assigned_to": {
                         "type": "integer",
@@ -451,7 +451,7 @@
                     "due_date": {
                         "type": "string",
                         "format": "date",
-                        "example": "2024-12-31"
+                        "example": "2026-12-31"
                     },
                     "assigned_to": {
                         "type": "integer",
@@ -585,7 +585,7 @@
                     "due_date": {
                         "type": "string",
                         "format": "date",
-                        "example": "2024-12-31"
+                        "example": "2026-12-31"
                     },
                     "assigned_to": {
                         "type": "integer",
