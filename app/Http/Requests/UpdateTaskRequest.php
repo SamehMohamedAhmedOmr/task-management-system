@@ -15,7 +15,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="title", type="string", example="Updated Task"),
  *     @OA\Property(property="description", type="string", example="Updated details"),
  *     @OA\Property(property="status", type="string", enum={"pending", "in_progress", "completed", "canceled"}, example="completed"),
- *     @OA\Property(property="due_date", type="string", format="date", example="2024-12-31"),
+ *     @OA\Property(property="due_date", type="string", format="date", example="2026-12-31"),
  *     @OA\Property(property="assigned_to", type="integer", example=2)
  * )
  */

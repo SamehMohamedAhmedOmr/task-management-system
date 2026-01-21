@@ -18,7 +18,7 @@ use OpenApi\Annotations as OA;
  *     @OA\Property(property="title", type="string", example="Implement Login"),
  *     @OA\Property(property="description", type="string", example="Create login endpoint with validation"),
  *     @OA\Property(property="status", type="string", enum={"pending", "in_progress", "completed", "canceled"}, example="pending"),
- *     @OA\Property(property="due_date", type="string", format="date", example="2024-12-31"),
+ *     @OA\Property(property="due_date", type="string", format="date", example="2026-12-31"),
  *     @OA\Property(property="assigned_to", type="integer", example=2),
  *     @OA\Property(property="created_by", type="integer", example=1),
  *     @OA\Property(property="created_at", type="string", format="date-time"),
