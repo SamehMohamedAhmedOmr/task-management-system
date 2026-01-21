@@ -4,6 +4,24 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Annotations as OA;
+
+/**
+ * @OA\Schema(
+ *     schema="TaskCollection",
+ *     title="Task Collection",
+ *     description="Paginated list of tasks",
+ *     @OA\Property(
+ *         property="data",
+ *         type="array",
+ *         @OA\Items(ref="#/components/schemas/Task")
+ *     ),
+ *     @OA\Property(
+ *         property="pagination",
+ *         ref="#/components/schemas/Pagination"
+ *     )
+ * )
+ */
 
 class TaskResource extends JsonResource
 {

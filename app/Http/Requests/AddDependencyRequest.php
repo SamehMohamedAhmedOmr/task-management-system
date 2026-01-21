@@ -33,7 +33,7 @@ class AddDependencyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'depends_on_task_id' => ['required', 'exists:tasks,id', 'different:task'],
+            'depends_on_task_id' => ['required', 'exists:tasks,id', 'different:id'],
         ];
     }
 }

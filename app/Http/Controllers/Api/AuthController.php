@@ -10,7 +10,6 @@ use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use App\Services\AuthService;
-use Illuminate\Support\Facades\Auth;
 use OpenApi\Annotations as OA;
 
 /**
@@ -108,4 +107,5 @@ class AuthController extends Controller
     {
         return ApiResponse::success(HttpStatus::OK, UserResource::make($request->user()), 'User details retrieved');
     }
+    
 }

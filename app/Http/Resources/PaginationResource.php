@@ -4,6 +4,26 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Annotations as OA;
+
+/**
+ * @OA\Schema(
+ *     schema="Pagination",
+ *     title="Pagination",
+ *     description="Pagination metadata for paginated responses",
+ *     @OA\Property(property="current_page", type="integer", example=1),
+ *     @OA\Property(property="first_page_url", type="string", example="http://api.test/api/tasks?page=1"),
+ *     @OA\Property(property="from", type="integer", example=1),
+ *     @OA\Property(property="last_page", type="integer", example=10),
+ *     @OA\Property(property="last_page_url", type="string", example="http://api.test/api/tasks?page=10"),
+ *     @OA\Property(property="next_page_url", type="string", nullable=true, example="http://api.test/api/tasks?page=2"),
+ *     @OA\Property(property="path", type="string", example="http://api.test/api/tasks"),
+ *     @OA\Property(property="per_page", type="integer", example=15),
+ *     @OA\Property(property="prev_page_url", type="string", nullable=true, example=null),
+ *     @OA\Property(property="to", type="integer", example=15),
+ *     @OA\Property(property="total", type="integer", example=145)
+ * )
+ */
 class PaginationResource extends JsonResource
 {
     /**
